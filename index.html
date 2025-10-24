@@ -165,14 +165,17 @@
         );
       }
 
-      // ---------- Station 3: Landing Challenge (Motor timing) ----------
+      // ---------- Station 3: Landing Challenge (clarified) ----------
       function StationLanding({ onComplete, done, setLandingError }) {
+        // One‑tap landing: tap once to cut engines.
+        // GOAL: stop with the CENTER of the blue capsule INSIDE the green band.
+        // The closer the center is to the band’s CENTER LINE, the better.
         const [y, setY] = useState(0);
         const [v, setV] = useState(0.5); // px per tick
         const [running, setRunning] = useState(true);
         const [stopped, setStopped] = useState(false);
         const [platformTop] = useState(180 + Math.round(Math.random() * 60)); // 180–240
-        const platformThickness = 24;
+        const platformThickness = 20; // touchdown zone thickness (px)
 
         useEffect(() => {
           if (!running) return;
@@ -187,14 +190,15 @@
           if (stopped) return;
           setRunning(false);
           setStopped(true);
-          const center = y;
-          const platformCenter = platformTop + platformThickness / 2;
-          const err = Math.abs(center - platformCenter);
+          const capsuleCenter = y + 16; // circle is 32px tall, center = y + 16
+          const bandCenter = platformTop + platformThickness / 2;
+          const err = Math.abs(capsuleCenter - bandCenter);
           setLandingError && setLandingError(err);
-          if (err <= platformThickness / 2) {
+          const inside = capsuleCenter >= platformTop && capsuleCenter <= platformTop + platformThickness;
+          if (inside) {
             onComplete();
           } else {
-            alert("Missed the platform — try again!");
+            alert("Missed the touchdown zone — aim so the BLUE center is inside the GREEN band.");
           }
         }
 
@@ -205,23 +209,44 @@
           setStopped(false);
         }
 
+        const capsuleCenterY = y + 16;
+        const bandCenterY = platformTop + platformThickness / 2;
+        const offset = Math.round(Math.abs(capsuleCenterY - bandCenterY));
+        const status = capsuleCenterY < platformTop
+          ? "Above band"
+          : capsuleCenterY > platformTop + platformThickness
+          ? "Below band"
+          : "Inside band ✓";
+
         return (
           <Card title="Landing Challenge (Motor timing)"
             done={done}
-            footer={<>Tap to cut engines and land on the platform band. Precision (px) becomes part of your score.</>}>
-            <div className="flex items-center gap-4">
+            footer={<>
+              Tap <b>once</b> to cut engines. <b>Goal:</b> center of the blue capsule <b>inside</b> the <span className="text-green-700">green band</span>.
+              Smaller offset to the center line = better.
+            </>}>
+            <div className="flex items-start gap-4">
               <div className="relative w-64 h-72 rounded-xl border bg-gradient-to-b from-slate-50 to-slate-100 overflow-hidden">
+                {/* Touchdown band */}
                 <div className="absolute left-0 right-0 bg-green-200" style={{ top: platformTop + "px", height: platformThickness + "px" }} />
+                {/* Band center line */}
+                <div className="absolute left-0 right-0 border-t border-green-600/60" style={{ top: (platformTop + platformThickness / 2) + "px" }} />
+                {/* Capsule (32px, so center = y + 16) */}
                 <div className="absolute left-28 w-8 h-8 rounded-full bg-blue-500 shadow" style={{ top: y + "px" }} />
+                {/* Capsule center marker */}
+                <div className="absolute left-[calc(7rem+0.5rem)] w-0 h-0" style={{ top: (capsuleCenterY) + "px" }}>
+                  <div className="w-2 h-2 -ml-1 -mt-1 rounded-full bg-blue-900"></div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Button onClick={cut} disabled={!running}>Cut engines</Button>
-                <div><Button variant="ghost" onClick={reset}>Reset</Button></div>
-                {stopped && (
-                  <div className="text-sm text-gray-600">
-                    Landing offset: ~{Math.round(Math.abs(y - (platformTop + platformThickness/2)))} px
-                  </div>
-                )}
+              <div className="space-y-2 text-sm">
+                <div className="text-gray-700"><b>Status:</b> {status}</div>
+                <div className="text-gray-700"><b>Offset to center line:</b> ~{offset} px</div>
+                <div className="text-xs text-gray-500">Tip: tap a little <i>before</i> the center line to counter momentum.</div>
+                <div className="pt-1">
+                  <Button onClick={cut} disabled={!running}>Cut engines</Button>
+                  <span className="mx-2"></span>
+                  <Button variant="ghost" onClick={reset}>Reset</Button>
+                </div>
               </div>
             </div>
           </Card>
@@ -368,7 +393,7 @@
               <div className="text-center">
                 <div className="text-2xl mb-2">🐝 Fly‑League Result</div>
                 <div className="text-lg">{rankMsg}</div>
-                <div className="text-xs text-gray-500 mt-2">(Simulated cohort for fun; no personal data stored.)</div>
+                <div className="text-xs text-gray-500 mt-2">(Simulated cohort for fun; no data leaves your device.)</div>
               </div>
             </Modal>
           </div>
